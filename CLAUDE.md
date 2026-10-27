@@ -69,6 +69,10 @@ Smart-pointer aliases live in `src/includes/`: `SharedPtr<T>` (= `std::shared_pt
 - `settings/`, `dialogs/`, `widgets/`, `context/`, `analyzer/`, `moodbar/`, `waveform/`, `equalizer/` — UI.
 - `mpris2/`, `globalshortcuts/`, `osd/`, `systemtrayicon/`, `discord/` — desktop integration (D-Bus, native notifications, etc.).
 
+### Main window sidebar tabs
+
+The sidebar (`ui_->tabs`) is a `FancyTabWidget` (`src/widgets/fancytabwidget.h`). `AddTab()` wraps every content widget in its own page (`FancyTabData::page()`), and that page is what is inserted into the `QTabWidget`. So `widget(index)`, `currentWidget()`, `indexOf(content)` and `setCurrentWidget(content)` never match the content widget passed to `AddTab()`. Always look tabs up with `IndexOfTab(content)` and compare/set by index (`currentIndex() == IndexOfTab(content)`, `setCurrentIndex(IndexOfTab(content))`). Ignoring this broke returning from the Android playlist editor to the playlist list when tapping the active Playlists tab; `FancyTabWidgetTest.ClickingActiveTabFindsContentWidget` in `tests/src/fancytabwidget_test.cpp` guards against it.
+
 ### Optional features
 
 Most features are compile-time optional, gated by `HAVE_*` macros generated into `config.h` (from `src/config.h.in`). In `CMakeLists.txt` they are added with the `optional_source(HAVE_X SOURCES ... HEADERS ...)` helper. Platform/feature code must be guarded with the matching `#ifdef HAVE_X` and CMake guard. D-Bus interfaces/adaptors (MPRIS2, notifications, UDisks2, KGlobalAccel) are generated from XML via `qt_add_dbus_interface` / `qt_add_dbus_adaptor`.

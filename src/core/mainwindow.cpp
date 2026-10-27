@@ -1313,18 +1313,19 @@ void MainWindow::SetupAndroidLayout() {
   update_playlist_name();
   QObject::connect(&*app_->playlist_manager(), &PlaylistManager::CurrentChanged, this, update_playlist_name);
   QObject::connect(&*app_->playlist_manager(), &PlaylistManager::PlaylistRenamed, this, update_playlist_name);
+  // FancyTabWidget wraps playlist_pages in its own page, so compare tab indexes from IndexOfTab() instead of widgets.
   QObject::connect(ui_->tabs->tabBar(), &QTabBar::tabBarClicked, this, [this, playlist_pages](const int index) {
-    if (ui_->tabs->widget(index) == playlist_pages) playlist_pages->setCurrentWidget(playlist_list_);
+    if (index == ui_->tabs->IndexOfTab(playlist_pages)) playlist_pages->setCurrentWidget(playlist_list_);
   });
   QObject::connect(playlist_list_, &PlaylistListContainer::PlaylistActivated, this, [this, playlist_pages]() {
     playlist_pages->setCurrentWidget(ui_->playlist_layout);
   });
   QObject::connect(ui_->action_new_playlist, &QAction::triggered, this, [this, playlist_pages]() {
-    ui_->tabs->setCurrentWidget(playlist_pages);
+    ui_->tabs->setCurrentIndex(ui_->tabs->IndexOfTab(playlist_pages));
     playlist_pages->setCurrentWidget(ui_->playlist_layout);
   });
   QObject::connect(ui_->tabs, &QTabWidget::currentChanged, this, [this, playlist_pages]() {
-    if (ui_->tabs->currentWidget() == playlist_pages) playlist_pages->setCurrentWidget(playlist_list_);
+    if (ui_->tabs->currentIndex() == ui_->tabs->IndexOfTab(playlist_pages)) playlist_pages->setCurrentWidget(playlist_list_);
   });
 
   ui_->tabs->SetMode(FancyTabWidget::Mode::LargeSidebar);
