@@ -136,6 +136,17 @@ Also install GStreamer plugins **base**, **good**, and optionally **bad**, **ugl
 
 For building on Windows with Visual Studio 2022/2026, see: :point_right: https://github.com/strawberrymusicplayer/strawberry-msvc-build-tools
 
+### Android layout
+
+On Android, the left navigation shows one view at a time. **Playlists** shows saved and open playlists.
+Tap a playlist to open its editor, then tap **Playlists** again to return to the list.
+The editor displays the current playlist's name in a larger, centered heading above its toolbar.
+Playback controls and the seek bar remain at the bottom when switching views.
+The player bar's **Menu** button provides access to the application menus, including settings.
+The playlist editor puts Clear, Undo, and Redo in its **More** menu to keep the toolbar compact.
+In portrait orientation, the editor shows only track number, title, artist, and album; landscape restores the full column layout.
+The desktop layout is unchanged.
+
 ---
 
 ## :package: Packaging status

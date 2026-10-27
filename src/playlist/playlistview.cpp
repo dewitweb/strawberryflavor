@@ -59,6 +59,9 @@
 #include <QtEvents>
 #include <QDrag>
 #include <QSignalBlocker>
+#ifdef Q_OS_ANDROID
+#  include <QScreen>
+#endif
 
 #include "includes/qt_blurimage.h"
 #include "core/song.h"
@@ -307,7 +310,11 @@ void PlaylistView::SetPlaylist(Playlist *playlist) {
   playlist_ = playlist;
   RestoreHeaderState();
   DynamicModeChanged(playlist->is_dynamic());
+#ifdef Q_OS_ANDROID
+  if (isVisible()) setFocus();
+#else
   setFocus();
+#endif
   JumpToLastPlayedTrack();
   playlist->set_auto_sort(auto_sort_);
 
@@ -360,6 +367,9 @@ void PlaylistView::LoadHeaderState() {
 
 void PlaylistView::SetHeaderState() {
 
+#ifdef Q_OS_ANDROID
+  if (portrait_columns_) return;
+#endif
   if (!header_state_loaded_) return;
   header_state_ = header_->SaveState();
 
@@ -384,6 +394,9 @@ void PlaylistView::ResetHeaderState() {
 
 void PlaylistView::RestoreHeaderState() {
 
+#ifdef Q_OS_ANDROID
+  portrait_columns_ = false;
+#endif
   if (!header_state_loaded_) LoadHeaderState();
 
   if (header_state_.isEmpty() || !header_->RestoreState(header_state_)) {
@@ -472,7 +485,50 @@ void PlaylistView::RestoreHeaderState() {
 
   Q_EMIT ColumnAlignmentChanged(column_alignment_);
 
+#ifdef Q_OS_ANDROID
+  UpdatePortraitColumns();
+#endif
 }
+
+#ifdef Q_OS_ANDROID
+void PlaylistView::UpdatePortraitColumns() {
+
+  if (!header_state_restored_ || !screen()) return;
+  const bool portrait = screen()->geometry().height() > screen()->geometry().width();
+  const QSignalBlocker blocker(header_);
+  if (!portrait) {
+    if (portrait_columns_) {
+      portrait_columns_ = false;
+      header_->RestoreState(header_state_);
+      header_->setContextMenuPolicy(Qt::DefaultContextMenu);
+      setHorizontalScrollBarPolicy(header_->is_stretch_enabled() ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    }
+    return;
+  }
+
+  if (!portrait_columns_) {
+    header_state_ = header_->SaveState();
+    portrait_columns_ = true;
+    header_->SetStretchEnabled(false);
+    header_->setContextMenuPolicy(Qt::PreventContextMenu);
+    const QList<Playlist::Column> columns = {Playlist::Column::Track, Playlist::Column::Title, Playlist::Column::Artist, Playlist::Column::Album};
+    for (int i = 0; i < header_->count(); ++i) {
+      header_->setSectionHidden(i, !columns.contains(static_cast<Playlist::Column>(i)));
+    }
+    for (int i = 0; i < columns.count(); ++i) {
+      header_->moveSection(header_->visualIndex(static_cast<int>(columns[i])), i);
+    }
+  }
+  const int track_width = fontMetrics().horizontalAdvance(u"T#"_s) + 16;
+  const int text_width = std::max(0, viewport()->width() - track_width) / 3;
+  header_->resizeSection(static_cast<int>(Playlist::Column::Track), track_width);
+  header_->resizeSection(static_cast<int>(Playlist::Column::Title), text_width);
+  header_->resizeSection(static_cast<int>(Playlist::Column::Artist), text_width);
+  header_->resizeSection(static_cast<int>(Playlist::Column::Album), std::max(0, viewport()->width() - track_width - 2 * text_width));
+  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+}
+#endif
 
 void PlaylistView::HeaderSectionResized(const int logical_index, const int old_size, const int new_size) {
 
@@ -713,6 +769,9 @@ void PlaylistView::showEvent(QShowEvent *e) {
   MaybeAutoscroll(Playlist::AutoScroll::Maybe);
 
   QTreeView::showEvent(e);
+#ifdef Q_OS_ANDROID
+  UpdatePortraitColumns();
+#endif
 
 }
 
@@ -1370,7 +1429,11 @@ void PlaylistView::SaveSettings() {
   Settings s;
   s.beginGroup(PlaylistSettings::kSettingsGroup);
   s.setValue(PlaylistSettings::kStateVersion, kHeaderStateVersion);
+#ifdef Q_OS_ANDROID
+  s.setValue(PlaylistSettings::kState, portrait_columns_ ? header_state_ : header_->SaveState());
+#else
   s.setValue(PlaylistSettings::kState, header_->SaveState());
+#endif
   s.setValue(PlaylistSettings::kColumnAlignments, QVariant::fromValue<ColumnAlignmentMap>(column_alignment_));
   s.setValue(PlaylistSettings::kRatingLocked, rating_locked_);
   s.endGroup();
@@ -1389,6 +1452,9 @@ void PlaylistView::StretchChanged(const bool stretch) {
 void PlaylistView::resizeEvent(QResizeEvent *e) {
 
   QTreeView::resizeEvent(e);
+#ifdef Q_OS_ANDROID
+  UpdatePortraitColumns();
+#endif
 
   if (dynamic_controls_->isVisible()) {
     RepositionDynamicControls();

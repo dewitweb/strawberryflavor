@@ -32,6 +32,7 @@
 class QTimer;
 class QTimeLine;
 class QLabel;
+class QMenu;
 class QAction;
 class QEvent;
 class QKeyEvent;
@@ -126,6 +127,9 @@ class PlaylistContainer : public QWidget {
 
  private:
   Ui_PlaylistContainer *ui_;
+#ifdef Q_OS_ANDROID
+  QMenu *toolbar_menu_;
+#endif
 
   SharedPtr<PlaylistManager> manager_;
   QAction *undo_;

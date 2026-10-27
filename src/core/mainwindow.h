@@ -306,6 +306,9 @@ class MainWindow : public QMainWindow, public PlatformInterface {
 
  private:
   void SaveSettings();
+#ifdef Q_OS_ANDROID
+  void SetupAndroidLayout();
+#endif
 
   static void ApplyAddBehaviour(const BehaviourSettings::AddBehaviour b, MimeData *mimedata);
   void ApplyPlayBehaviour(const BehaviourSettings::PlayBehaviour b, MimeData *mimedata) const;

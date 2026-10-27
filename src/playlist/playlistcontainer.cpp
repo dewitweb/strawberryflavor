@@ -40,6 +40,8 @@
 #include <QTimeLine>
 #include <QFileDialog>
 #include <QLabel>
+#include <QMenu>
+#include <QHBoxLayout>
 #include <QKeySequence>
 #include <QToolButton>
 #include <QUndoStack>
@@ -86,6 +88,30 @@ PlaylistContainer::PlaylistContainer(QWidget *parent)
       filter_timer_(new QTimer(this)) {
 
   ui_->setupUi(this);
+
+#ifdef Q_OS_ANDROID
+  QHBoxLayout *buttons = new QHBoxLayout;
+  for (QToolButton *button : {ui_->create_new, ui_->load, ui_->save}) {
+    ui_->horizontalLayout->removeWidget(button);
+    button->setMinimumSize(48, 48);
+    buttons->addWidget(button);
+  }
+  toolbar_menu_ = new QMenu(this);
+  QToolButton *menu_button = new QToolButton(ui_->toolbar);
+  menu_button->setIcon(IconLoader::Load(u"configure"_s));
+  menu_button->setToolTip(tr("More"));
+  menu_button->setAccessibleName(tr("More"));
+  menu_button->setMinimumSize(48, 48);
+  menu_button->setPopupMode(QToolButton::InstantPopup);
+  menu_button->setMenu(toolbar_menu_);
+  buttons->addWidget(menu_button);
+  ui_->clear->hide();
+  ui_->undo->hide();
+  ui_->redo->hide();
+  ui_->line->hide();
+  ui_->horizontalLayout->setDirection(QBoxLayout::TopToBottom);
+  ui_->horizontalLayout->insertLayout(0, buttons);
+#endif
 
   no_matches_label_ = new QLabel(ui_->playlist);
   no_matches_label_->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
@@ -145,7 +171,12 @@ void PlaylistContainer::SetActions(const Actions &actions) {
   ui_->create_new->setDefaultAction(actions.new_playlist);
   ui_->load->setDefaultAction(actions.load_playlist);
   ui_->save->setDefaultAction(actions.save_playlist);
+#ifdef Q_OS_ANDROID
+  toolbar_menu_->addAction(actions.clear_playlist);
+  toolbar_menu_->addSeparator();
+#else
   ui_->clear->setDefaultAction(actions.clear_playlist);
+#endif
 
   ui_->tab_bar->SetActions(actions.new_playlist, actions.load_playlist);
 
@@ -241,6 +272,10 @@ void PlaylistContainer::SetViewModel(Playlist *playlist, const int scroll_positi
 
   ui_->undo->setDefaultAction(undo_);
   ui_->redo->setDefaultAction(redo_);
+#ifdef Q_OS_ANDROID
+  toolbar_menu_->addAction(undo_);
+  toolbar_menu_->addAction(redo_);
+#endif
 
   Q_EMIT UndoRedoActionsChanged(undo_, redo_);
 
@@ -262,16 +297,20 @@ void PlaylistContainer::ReloadSettings() {
   ui_->search_field->setIconSize(iconsize);
 
   s.beginGroup(PlaylistSettings::kSettingsGroup);
+#ifndef Q_OS_ANDROID
   const bool playlist_clear = s.value(PlaylistSettings::kPlaylistClear, PlaylistSettings::kDefaultPlaylistClear).toBool();
+#endif
   const bool show_toolbar = s.value(PlaylistSettings::kShowToolbar, PlaylistSettings::kDefaultShowToolbar).toBool();
   s.endGroup();
 
+#ifndef Q_OS_ANDROID
   if (playlist_clear) {
     ui_->clear->show();
   }
   else {
     ui_->clear->hide();
   }
+#endif
 
   ui_->toolbar->setVisible(show_toolbar);
 

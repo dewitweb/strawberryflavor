@@ -56,6 +56,7 @@
 #include <QTimer>
 #include <QKeySequence>
 #include <QMenu>
+#include <QMenuBar>
 #include <QAction>
 #include <QActionGroup>
 #include <QShortcut>
@@ -480,7 +481,15 @@ MainWindow::MainWindow(Application *app,
   ui_->tabs->AddTab(context_view_, u"context"_s, IconLoader::Load(u"strawberry"_s, true, 0, 32), tr("Context"));
   ui_->tabs->AddTab(collection_view_, u"collection"_s, IconLoader::Load(u"library-music"_s, true, 0, 32), tr("Collection"));
   ui_->tabs->AddTab(queue_view_, u"queue"_s, IconLoader::Load(u"footsteps"_s, true, 0, 32), tr("Queue"));
+#ifdef Q_OS_ANDROID
+  QStackedWidget *playlist_pages = new QStackedWidget(ui_->tabs);
+  playlist_pages->setObjectName(u"android_playlist_pages"_s);
+  playlist_pages->addWidget(playlist_list_);
+  playlist_pages->addWidget(ui_->playlist_layout);
+  ui_->tabs->AddTab(playlist_pages, u"playlists"_s, IconLoader::Load(u"view-media-playlist"_s, true, 0, 32), tr("Playlists"));
+#else
   ui_->tabs->AddTab(playlist_list_, u"playlists"_s, IconLoader::Load(u"view-media-playlist"_s, true, 0, 32), tr("Playlists"));
+#endif
   ui_->tabs->AddTab(smartplaylists_view_, u"smartplaylists"_s, IconLoader::Load(u"view-media-playlist"_s, true, 0, 32), tr("Smart playlists"));
   ui_->tabs->AddTab(file_view_, u"files"_s, IconLoader::Load(u"document-open"_s, true, 0, 32), tr("Files"));
   ui_->tabs->AddTab(radio_view_, u"radios"_s, IconLoader::Load(u"radio"_s, true, 0, 32), tr("Radios"));
@@ -505,7 +514,9 @@ MainWindow::MainWindow(Application *app,
 #endif
 
   // Add the playing widget to the fancy tab widget
+#ifndef Q_OS_ANDROID
   ui_->tabs->AddBottomWidget(ui_->widget_playing);
+#endif
   ui_->tabs->SetBackgroundPixmap(QPixmap(u":/pictures/sidebar-background.png"_s));
   ui_->tabs->LoadSettings(QLatin1String(MainWindowSettings::kSettingsGroup));
 
@@ -1124,6 +1135,10 @@ MainWindow::MainWindow(Application *app,
 
   ReloadSettings();
 
+#ifdef Q_OS_ANDROID
+  SetupAndroidLayout();
+#endif
+
   // Reload pretty OSD to avoid issues with fonts
   osd_->ReloadPrettyOSDSettings();
 
@@ -1174,7 +1189,12 @@ MainWindow::MainWindow(Application *app,
   }
 #endif
 
-  bool show_sidebar = settings.value(MainWindowSettings::kShowSidebar, MainWindowSettings::kDefaultShowSidebar).toBool();
+#ifdef Q_OS_ANDROID
+  const bool show_sidebar = true;
+  ui_->action_toggle_show_sidebar->setEnabled(false);
+#else
+  const bool show_sidebar = settings.value(MainWindowSettings::kShowSidebar, MainWindowSettings::kDefaultShowSidebar).toBool();
+#endif
   ui_->sidebar_layout->setVisible(show_sidebar);
   ui_->action_toggle_show_sidebar->setChecked(show_sidebar);
 
@@ -1259,6 +1279,84 @@ MainWindow::MainWindow(Application *app,
 MainWindow::~MainWindow() {
   delete ui_;
 }
+
+#ifdef Q_OS_ANDROID
+void MainWindow::SetupAndroidLayout() {
+
+  ui_->layout_centralWidget->insertWidget(0, ui_->tabs, 1);
+  ui_->layout_centralWidget->addWidget(ui_->player_controls_container);
+  ui_->splitter->hide();
+  ui_->line_6->hide();
+  ui_->layout_right->setContentsMargins(0, 0, 0, 0);
+
+  QStackedWidget *playlist_pages = findChild<QStackedWidget*>(u"android_playlist_pages"_s);
+  QLabel *playlist_name = new QLabel(ui_->playlist_layout);
+  playlist_name->setMinimumHeight(48);
+  playlist_name->setAlignment(Qt::AlignCenter);
+  playlist_name->setWordWrap(true);
+  playlist_name->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+  QFont playlist_name_font = playlist_name->font();
+  playlist_name_font.setBold(true);
+  if (playlist_name_font.pointSizeF() > 0) {
+    playlist_name_font.setPointSizeF(playlist_name_font.pointSizeF() * 1.5);
+  }
+  else {
+    playlist_name_font.setPixelSize(qRound(playlist_name_font.pixelSize() * 1.5));
+  }
+  playlist_name->setFont(playlist_name_font);
+  ui_->layout_right->insertWidget(0, playlist_name);
+  const auto update_playlist_name = [this, playlist_name]() {
+    if (Playlist *playlist = app_->playlist_manager()->current()) {
+      playlist_name->setText(app_->playlist_manager()->GetPlaylistName(playlist->id()));
+    }
+  };
+  update_playlist_name();
+  QObject::connect(&*app_->playlist_manager(), &PlaylistManager::CurrentChanged, this, update_playlist_name);
+  QObject::connect(&*app_->playlist_manager(), &PlaylistManager::PlaylistRenamed, this, update_playlist_name);
+  QObject::connect(ui_->tabs->tabBar(), &QTabBar::tabBarClicked, this, [this, playlist_pages](const int index) {
+    if (ui_->tabs->widget(index) == playlist_pages) playlist_pages->setCurrentWidget(playlist_list_);
+  });
+  QObject::connect(playlist_list_, &PlaylistListContainer::PlaylistActivated, this, [this, playlist_pages]() {
+    playlist_pages->setCurrentWidget(ui_->playlist_layout);
+  });
+  QObject::connect(ui_->action_new_playlist, &QAction::triggered, this, [this, playlist_pages]() {
+    ui_->tabs->setCurrentWidget(playlist_pages);
+    playlist_pages->setCurrentWidget(ui_->playlist_layout);
+  });
+  QObject::connect(ui_->tabs, &QTabWidget::currentChanged, this, [this, playlist_pages]() {
+    if (ui_->tabs->currentWidget() == playlist_pages) playlist_pages->setCurrentWidget(playlist_list_);
+  });
+
+  ui_->tabs->SetMode(FancyTabWidget::Mode::LargeSidebar);
+  ui_->tabs->setContextMenuPolicy(Qt::PreventContextMenu);
+
+  ui_->analyzer->hide();
+  ui_->volume->hide();
+  ui_->line_volume->hide();
+  ui_->playlist_summary->setMinimumWidth(0);
+  ui_->playlist_summary->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+  ui_->playlist_summary->setWordWrap(true);
+  ui_->layout_status_bar_internal->removeWidget(ui_->track_slider);
+  ui_->layout_player_controls_container->insertWidget(0, ui_->track_slider);
+  ui_->track_slider->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+
+  QMenu *menu = new QMenu(this);
+  menu->addActions(ui_->menuBar->actions());
+  QToolButton *menu_button = new QToolButton(ui_->player_controls);
+  menu_button->setIcon(IconLoader::Load(u"configure"_s));
+  menu_button->setToolTip(tr("Menu"));
+  menu_button->setAccessibleName(tr("Menu"));
+  menu_button->setPopupMode(QToolButton::InstantPopup);
+  menu_button->setMenu(menu);
+  ui_->layout_player_controls->addWidget(menu_button);
+  ui_->menuBar->hide();
+
+  for (QToolButton *button : {ui_->back_button, ui_->pause_play_button, ui_->stop_button, ui_->forward_button, ui_->button_love, menu_button}) {
+    button->setMinimumSize(48, 48);
+  }
+
+}
+#endif
 
 void MainWindow::ReloadSettings() {
 
@@ -1751,12 +1849,16 @@ void MainWindow::TrackSkipped(PlaylistItemPtr item) {
 
 void MainWindow::TabSwitched() {
 
+#ifdef Q_OS_ANDROID
+  ui_->widget_playing->SetDisabled();
+#else
   if (playing_widget_ && ui_->action_toggle_show_sidebar->isChecked() && (ui_->tabs->currentIndex() != ui_->tabs->IndexOfTab(context_view_) || !context_view_->album_enabled())) {
     ui_->widget_playing->SetEnabled();
   }
   else {
     ui_->widget_playing->SetDisabled();
   }
+#endif
 
 }
 
@@ -3085,8 +3187,13 @@ void MainWindow::TaskCountChanged(const int count) {
 
 void MainWindow::PlayingWidgetPositionChanged(const bool above_status_bar) {
 
+#ifdef Q_OS_ANDROID
+  Q_UNUSED(above_status_bar);
+  ui_->status_bar->setParent(ui_->player_controls_container);
+#else
   if (above_status_bar) ui_->status_bar->setParent(ui_->centralWidget);
   else ui_->status_bar->setParent(ui_->player_controls_container);
+#endif
 
   ui_->status_bar->parentWidget()->layout()->addWidget(ui_->status_bar);
   ui_->status_bar->show();

@@ -185,6 +185,10 @@ class PlaylistView : public QTreeView {
  private:
   void LoadHeaderState();
   void RestoreHeaderState();
+#ifdef Q_OS_ANDROID
+  void UpdatePortraitColumns();
+  bool portrait_columns_ = false;
+#endif
 
   void ReloadBarPixmaps();
   QList<QPixmap> LoadBarPixmap(const QString &filename, const bool keep_aspect_ratio);

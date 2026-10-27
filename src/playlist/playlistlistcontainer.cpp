@@ -110,7 +110,15 @@ PlaylistListContainer::PlaylistListContainer(QWidget *parent)
   ui_->tree->setModel(proxy_);
 
   QObject::connect(ui_->tree, &PlaylistListView::ItemsSelectedChanged, this, &PlaylistListContainer::ItemsSelectedChanged);
+#ifdef Q_OS_ANDROID
+  QObject::connect(ui_->tree, &PlaylistListView::clicked, this, &PlaylistListContainer::ItemDoubleClicked);
+  ui_->tree->setMinimumHeight(48);
+  for (QToolButton *button : {ui_->new_folder, ui_->remove, ui_->save_playlist}) {
+    button->setMinimumSize(48, 48);
+  }
+#else
   QObject::connect(ui_->tree, &PlaylistListView::doubleClicked, this, &PlaylistListContainer::ItemDoubleClicked);
+#endif
   QObject::connect(ui_->tree, &PlaylistListView::ItemMimeDataDroppedSignal, this, &PlaylistListContainer::ItemMimeDataDropped);
 
   model_->invisibleRootItem()->setData(PlaylistListModel::Type_Folder, PlaylistListModel::Role_Type);
@@ -229,9 +237,13 @@ void PlaylistListContainer::NewFolderClicked() {
 
 void PlaylistListContainer::AddPlaylist(const int id, const QString &name, const bool favorite) {
 
+#ifdef Q_OS_ANDROID
+  Q_UNUSED(favorite);
+#else
   if (!favorite) {
     return;
   }
+#endif
 
   if (!playlist_manager_->IsPlaylistOpen(id)) {
     return;
@@ -293,6 +305,9 @@ void PlaylistListContainer::SavePlaylist() {
 
 void PlaylistListContainer::PlaylistFavoriteStateChanged(const int id, const bool favorite) {
 
+#ifdef Q_OS_ANDROID
+  AddPlaylist(id, playlist_manager_->GetPlaylistName(id), favorite);
+#else
   if (favorite) {
     const QString &name = playlist_manager_->GetPlaylistName(id);
     AddPlaylist(id, name, favorite);
@@ -300,6 +315,7 @@ void PlaylistListContainer::PlaylistFavoriteStateChanged(const int id, const boo
   else {
     RemovePlaylist(id);
   }
+#endif
 
 }
 
@@ -361,6 +377,7 @@ void PlaylistListContainer::ItemDoubleClicked(const QModelIndex &proxy_idx) {
   // Is it a playlist?
   if (idx.data(PlaylistListModel::Role_Type).toInt() == PlaylistListModel::Type_Playlist) {
     playlist_manager_->SetCurrentOrOpen(idx.data(PlaylistListModel::Role_PlaylistId).toInt());
+    Q_EMIT PlaylistActivated();
   }
 
 }
