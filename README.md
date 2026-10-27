@@ -145,6 +145,8 @@ Playback controls and the seek bar remain at the bottom when switching views.
 The player bar's **Menu** button provides access to the application menus, including settings.
 The playlist editor puts Clear, Undo, and Redo in its **More** menu to keep the toolbar compact.
 In portrait orientation, the editor shows only track number, title, artist, and album; landscape restores the full column layout.
+Playlist export uses Android's document picker and preserves the selected playlist format separately from the document URI.
+Tracks in exported Android documents use absolute paths because document providers do not expose a normal filesystem directory for relative paths.
 The desktop layout is unchanged.
 
 ---
