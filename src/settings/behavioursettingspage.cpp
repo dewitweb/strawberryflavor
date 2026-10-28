@@ -73,6 +73,12 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
   ui_->groupbox_startup->hide();
 #endif
 
+#ifdef Q_OS_ANDROID
+  ui_->checkbox_showtrayicon->hide();
+  ui_->checkbox_keeprunning->hide();
+  ui_->checkbox_trayicon_progress->hide();
+#endif
+
 #if !defined(HAVE_DBUS) || defined(Q_OS_MACOS)
   ui_->checkbox_taskbar_progress->hide();
 #endif
