@@ -73,6 +73,18 @@ Smart-pointer aliases live in `src/includes/`: `SharedPtr<T>` (= `std::shared_pt
 
 The sidebar (`ui_->tabs`) is a `FancyTabWidget` (`src/widgets/fancytabwidget.h`). `AddTab()` wraps every content widget in its own page (`FancyTabData::page()`), and that page is what is inserted into the `QTabWidget`. So `widget(index)`, `currentWidget()`, `indexOf(content)` and `setCurrentWidget(content)` never match the content widget passed to `AddTab()`. Always look tabs up with `IndexOfTab(content)` and compare/set by index (`currentIndex() == IndexOfTab(content)`, `setCurrentIndex(IndexOfTab(content))`). Ignoring this broke returning from the Android playlist editor to the playlist list when tapping the active Playlists tab; `FancyTabWidgetTest.ClickingActiveTabFindsContentWidget` in `tests/src/fancytabwidget_test.cpp` guards against it.
 
+### Hierarchical navigation
+
+When adding or changing hierarchical menus or navigation flows anywhere in the app:
+
+- Make the current location clear at every level. Use a breadcrumb or an equivalent platform-appropriate hierarchy indicator when the parent is not otherwise obvious (for example, `Settings > General > Behavior`).
+- Back returns exactly one level to the parent; it closes or exits the flow only from its root.
+- Show only the active level or page. Hide or remove inactive content so controls from a previous level cannot remain visible or interactive behind the current one.
+- Preserve the parent context when returning, including selection or scroll position where practical.
+- Keep navigation controls discoverable and usable with the input method and screen size of the target platform.
+
+The Android Settings overview and its category/page navigation are an example of this pattern.
+
 ### Optional features
 
 Most features are compile-time optional, gated by `HAVE_*` macros generated into `config.h` (from `src/config.h.in`). In `CMakeLists.txt` they are added with the `optional_source(HAVE_X SOURCES ... HEADERS ...)` helper. Platform/feature code must be guarded with the matching `#ifdef HAVE_X` and CMake guard. D-Bus interfaces/adaptors (MPRIS2, notifications, UDisks2, KGlobalAccel) are generated from XML via `qt_add_dbus_interface` / `qt_add_dbus_adaptor`.
