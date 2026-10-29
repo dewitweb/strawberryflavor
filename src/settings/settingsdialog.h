@@ -38,6 +38,7 @@ class QWidget;
 class QTreeWidgetItem;
 class QComboBox;
 class QScrollArea;
+class QStackedWidget;
 class QAbstractButton;
 class QShowEvent;
 class QCloseEvent;
@@ -109,6 +110,9 @@ class SettingsDialog : public QDialog {
   bool is_loading_settings() const { return loading_settings_; }
 
   void OpenAtPage(const Page page);
+#ifdef Q_OS_ANDROID
+  void OpenOverview();
+#endif
 
  protected:
   void showEvent(QShowEvent *e) override;
@@ -148,6 +152,12 @@ class SettingsDialog : public QDialog {
   Ui_SettingsDialog *ui_;
   bool loading_settings_;
   QMap<Page, PageData> pages_;
+#ifdef Q_OS_ANDROID
+  QStackedWidget *android_navigation_;
+  QWidget *android_categories_page_;
+  QMap<Page, QWidget*> android_category_pages_;
+  QWidget *android_current_category_page_;
+#endif
 };
 
 #endif  // SETTINGSDIALOG_H

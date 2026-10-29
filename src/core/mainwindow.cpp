@@ -494,6 +494,10 @@ MainWindow::MainWindow(Application *app,
   ui_->tabs->AddTab(file_view_, u"files"_s, IconLoader::Load(u"document-open"_s, true, 0, 32), tr("Files"));
   ui_->tabs->AddTab(radio_view_, u"radios"_s, IconLoader::Load(u"radio"_s, true, 0, 32), tr("Radios"));
   ui_->tabs->AddTab(device_view_, u"devices"_s, IconLoader::Load(u"device"_s, true, 0, 32), tr("Devices"));
+#ifdef Q_OS_ANDROID
+  QWidget *settings_tab = new QWidget(ui_->tabs);
+  ui_->tabs->AddTab(settings_tab, u"settings"_s, IconLoader::Load(u"configure"_s, true, 0, 32), tr("Settings"));
+#endif
 #ifdef HAVE_SUBSONIC
   ui_->tabs->AddTab(subsonic_view_, u"subsonic"_s, IconLoader::Load(u"subsonic"_s, true, 0, 32), tr("Subsonic"));
 #endif
@@ -1121,6 +1125,19 @@ MainWindow::MainWindow(Application *app,
   }
 
   ui_->tabs->setCurrentIndex(settings.value(FancyTabWidget::kCurrentTab, 1).toInt());
+#ifdef Q_OS_ANDROID
+  const auto previous_tab_index = make_shared<int>(ui_->tabs->currentIndex());
+  const int settings_tab_index = ui_->tabs->IndexOfTab(settings_tab);
+  QObject::connect(ui_->tabs, &FancyTabWidget::CurrentTabChanged, this, [this, previous_tab_index, settings_tab_index](const int index) {
+    if (index == settings_tab_index) {
+      ui_->tabs->setCurrentIndex(*previous_tab_index);
+      OpenSettingsDialog();
+    }
+    else {
+      *previous_tab_index = index;
+    }
+  });
+#endif
   FancyTabWidget::Mode default_mode = FancyTabWidget::Mode::LargeSidebar;
   FancyTabWidget::Mode tab_mode = static_cast<FancyTabWidget::Mode>(settings.value(FancyTabWidget::kTabMode, static_cast<int>(default_mode)).toInt());
   if (tab_mode == FancyTabWidget::Mode::None) tab_mode = default_mode;
@@ -3446,7 +3463,11 @@ SettingsDialog *MainWindow::CreateSettingsDialog() {
 
 void MainWindow::OpenSettingsDialog() {
 
+#ifdef Q_OS_ANDROID
+  settings_dialog_->OpenOverview();
+#else
   settings_dialog_->show();
+#endif
   settings_dialog_->raise();
 
 }

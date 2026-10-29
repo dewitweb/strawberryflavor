@@ -21,9 +21,15 @@
 
 #include "config.h"
 
+#include <algorithm>
+
 #include <QtGlobal>
 #include <QDialog>
 #include <QWidget>
+#include <QFont>
+#include <QSizePolicy>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QMainWindow>
 #include <QScreen>
 #include <QAbstractItemModel>
@@ -31,6 +37,7 @@
 #include <QTreeWidget>
 #include <QList>
 #include <QString>
+#include <QStringList>
 #include <QPainter>
 #include <QFrame>
 #include <QKeySequence>
@@ -50,6 +57,7 @@
 #include "core/settings.h"
 #include "core/player.h"
 #include "core/appearance.h"
+#include "core/iconloader.h"
 #include "utilities/screenutils.h"
 #include "widgets/groupediconview.h"
 #include "collection/collectionmanager.h"
@@ -134,7 +142,13 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
     : QDialog(parent),
       mainwindow_(mainwindow),
       ui_(new Ui_SettingsDialog),
-      loading_settings_(false) {
+      loading_settings_(false)
+#ifdef Q_OS_ANDROID
+      , android_navigation_(nullptr),
+      android_categories_page_(nullptr),
+      android_current_category_page_(nullptr)
+#endif
+      {
 
   ui_->setupUi(this);
   ui_->list->setItemDelegate(new SettingsItemDelegate(this));
@@ -193,12 +207,127 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
 
   AddPage(Page::Radio, new RadioSettingsPage(this, this), streaming);
 
+#ifdef Q_OS_ANDROID
+  android_navigation_ = new QStackedWidget(this);
+  android_navigation_->setMinimumWidth(0);
+  android_categories_page_ = new QWidget(android_navigation_);
+  auto *categories_layout = new QVBoxLayout(android_categories_page_);
+  categories_layout->setContentsMargins(0, 0, 0, 0);
+  categories_layout->setSpacing(8);
+  android_navigation_->addWidget(android_categories_page_);
+  const QStringList category_icon_names = {u"strawberry"_s, u"view-choose"_s, u"applications-internet"_s};
+
+  QTreeWidgetItem *root = ui_->list->invisibleRootItem();
+  for (int i = 0; i < root->childCount(); ++i) {
+    QTreeWidgetItem *category = root->child(i);
+    QScrollArea *category_page = new QScrollArea(android_navigation_);
+    category_page->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    category_page->setWidgetResizable(true);
+    category_page->setFrameShape(QFrame::NoFrame);
+    QWidget *category_contents = new QWidget(category_page);
+    auto *category_layout = new QVBoxLayout(category_contents);
+    category_layout->setContentsMargins(0, 0, 0, 0);
+    category_layout->setSpacing(8);
+    category_page->setWidget(category_contents);
+
+    QPushButton *category_button = new QPushButton(category->text(0), android_categories_page_);
+    if (i < category_icon_names.size()) {
+      category_button->setIcon(IconLoader::Load(category_icon_names.at(i)));
+      category_button->setIconSize(QSize(32, 32));
+    }
+    category_button->setMinimumHeight(64);
+    category_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    categories_layout->addWidget(category_button);
+    QObject::connect(category_button, &QPushButton::clicked, this, [this, category_page, category]() {
+      android_current_category_page_ = category_page;
+      ui_->title->setText(QStringLiteral("<b>") + category->text(0) + u"</b>"_s);
+      android_navigation_->setCurrentWidget(category_page);
+      ui_->buttonBox->hide();
+    });
+
+    for (int j = 0; j < category->childCount(); ++j) {
+      QTreeWidgetItem *item = category->child(j);
+      auto page_it = std::find_if(pages_.cbegin(), pages_.cend(), [item](const PageData &page) { return page.item_ == item; });
+      if (page_it == pages_.cend()) continue;
+
+      QPushButton *page_button = new QPushButton(item->icon(0), item->text(0), category_contents);
+      page_button->setMinimumHeight(56);
+      page_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+      category_layout->addWidget(page_button);
+      android_category_pages_.insert(page_it.key(), category_page);
+      QObject::connect(page_button, &QPushButton::clicked, this, [this, item, category_page]() {
+        android_current_category_page_ = category_page;
+        CurrentItemChanged(item);
+        android_navigation_->setCurrentWidget(ui_->stacked_widget);
+        ui_->buttonBox->show();
+      });
+    }
+
+    category_layout->addStretch();
+    android_navigation_->addWidget(category_page);
+  }
+  categories_layout->addStretch();
+
+  auto *header = new QHBoxLayout;
+  QPushButton *back_button = new QPushButton(tr("Back"), this);
+  back_button->setIcon(IconLoader::Load(u"go-previous"_s));
+  back_button->setIconSize(QSize(32, 32));
+  back_button->setMinimumHeight(48);
+  QFont title_font = ui_->title->font();
+  title_font.setPointSize(18);
+  title_font.setBold(true);
+  ui_->title->setFont(title_font);
+  header->addWidget(ui_->title, 1);
+  header->addWidget(back_button);
+  ui_->layout->removeWidget(ui_->title);
+  ui_->layout->removeWidget(ui_->line_2);
+  ui_->line_2->hide();
+  ui_->layout->removeWidget(ui_->stacked_widget);
+  android_navigation_->addWidget(ui_->stacked_widget);
+  ui_->layout->removeWidget(ui_->line_1);
+  ui_->line_1->hide();
+  ui_->layout->insertLayout(0, header);
+  ui_->layout->insertWidget(1, android_navigation_);
+  ui_->list->hide();
+  ui_->stacked_widget->setMinimumWidth(0);
+  ui_->buttonBox->setMinimumWidth(0);
+  ui_->buttonBox->hide();
+  setMinimumSize(0, 0);
+  ui_->layout_dialog->setSizeConstraint(QLayout::SetNoConstraint);
+
+  QObject::connect(back_button, &QPushButton::clicked, this, [this]() {
+    if (android_navigation_->currentWidget() == ui_->stacked_widget) {
+      android_navigation_->setCurrentWidget(android_current_category_page_);
+      ui_->buttonBox->hide();
+      QTreeWidgetItem *item = ui_->list->currentItem();
+      if (item && item->parent()) {
+        ui_->title->setText(QStringLiteral("<b>") + item->parent()->text(0) + u"</b>"_s);
+      }
+    }
+    else if (android_navigation_->currentWidget() != android_categories_page_) {
+      ui_->title->setText(tr("Settings"));
+      android_navigation_->setCurrentWidget(android_categories_page_);
+      ui_->buttonBox->hide();
+    }
+    else {
+      reject();
+    }
+  });
+#endif
+
   // List box
   QObject::connect(ui_->list, &QTreeWidget::currentItemChanged, this, &SettingsDialog::CurrentItemChanged);
   ui_->list->setCurrentItem(pages_.value(Page::Behaviour).item_);
+#ifdef Q_OS_ANDROID
+  ui_->title->setText(tr("Settings"));
+  android_navigation_->setCurrentWidget(android_categories_page_);
+  ui_->buttonBox->hide();
+#endif
 
   // Make sure the list is big enough to show all the items
+#ifndef Q_OS_ANDROID
   ui_->list->setMinimumWidth(qobject_cast<QAbstractItemView*>(ui_->list)->sizeHintForColumn(0));  // clazy:exclude=unneeded-cast
+#endif
 
   ui_->buttonBox->button(QDialogButtonBox::Cancel)->setShortcut(QKeySequence::Close);
 
@@ -264,6 +393,10 @@ void SettingsDialog::reject() {
 
 void SettingsDialog::LoadGeometry() {
 
+#ifdef Q_OS_ANDROID
+  setGeometry(mainwindow_->geometry());
+  return;
+#else
   Settings s;
   s.beginGroup(QLatin1String(kSettingsGroup));
   if (s.contains(kGeometry)) {
@@ -273,6 +406,7 @@ void SettingsDialog::LoadGeometry() {
 
   // Center the dialog on the same screen as mainwindow.
   Utilities::CenterWidgetOnScreen(Utilities::GetScreen(mainwindow_), this);
+#endif
 
 }
 
@@ -320,11 +454,19 @@ void SettingsDialog::AddPage(const Page id, SettingsPage *page, QTreeWidgetItem 
 
   // Create a scroll area containing the page
   QScrollArea *area = new QScrollArea;
+#ifdef Q_OS_ANDROID
+  area->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  area->setMinimumWidth(0);
+  page->setMinimumWidth(0);
+#else
   area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+#endif
   area->setWidget(page);
   area->setWidgetResizable(true);
   area->setFrameShape(QFrame::NoFrame);
+#ifndef Q_OS_ANDROID
   area->setMinimumWidth(page->layout()->minimumSize().width());
+#endif
 
   // Add the page to the stack
   ui_->stacked_widget->addWidget(area);
@@ -368,10 +510,27 @@ void SettingsDialog::OpenAtPage(const Page page) {
     return;
   }
 
+#ifdef Q_OS_ANDROID
+  android_current_category_page_ = android_category_pages_.value(page, android_categories_page_);
+#endif
   ui_->list->setCurrentItem(pages_.value(page).item_);
+#ifdef Q_OS_ANDROID
+  android_navigation_->setCurrentWidget(ui_->stacked_widget);
+  ui_->buttonBox->show();
+#endif
   show();
 
 }
+
+#ifdef Q_OS_ANDROID
+void SettingsDialog::OpenOverview() {
+
+  ui_->title->setText(tr("Settings"));
+  android_navigation_->setCurrentWidget(android_categories_page_);
+  show();
+
+}
+#endif
 
 void SettingsDialog::CurrentItemChanged(QTreeWidgetItem *item) {
 
