@@ -31,11 +31,19 @@
 #include <QDir>
 #include <QLocale>
 #include <QSettings>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
+#include <QListWidget>
+#include <QPushButton>
+#include <QScreen>
+#include <QGuiApplication>
 #include <QSystemTrayIcon>
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QSpinBox>
 #include <QComboBox>
+#include <QAbstractItemView>
 #include <QGroupBox>
 
 #include "constants/behavioursettings.h"
@@ -53,14 +61,18 @@ class SettingsDialog;
 #ifdef HAVE_TRANSLATIONS
 namespace {
 bool LocaleAwareCompare(const QString &a, const QString &b) {
-  return a.localeAwareCompare(b) < 0;
+  return a.toCaseFolded().localeAwareCompare(b.toCaseFolded()) < 0;
 }
 }  // namespace
 #endif
 
 BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *parent)
     : SettingsPage(dialog, parent),
-      ui_(new Ui_BehaviourSettingsPage) {
+      ui_(new Ui_BehaviourSettingsPage)
+#if defined(Q_OS_ANDROID) && defined(HAVE_TRANSLATIONS)
+      , language_button_(nullptr)
+#endif
+      {
 
   ui_->setupUi(this);
   setWindowIcon(IconLoader::Load(u"strawberry"_s, true, 0, 32));
@@ -116,6 +128,47 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
   QStringList names = language_map_.keys();
   std::stable_sort(names.begin(), names.end(), LocaleAwareCompare);
   ui_->combobox_language->addItems(names);
+#ifdef Q_OS_ANDROID
+  language_button_ = new QPushButton(ui_->groupbox_language);
+  language_button_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  language_button_->setMinimumHeight(48);
+  ui_->layout_language->insertWidget(0, language_button_);
+  ui_->combobox_language->hide();
+
+  QObject::connect(language_button_, &QPushButton::clicked, this, [this]() {
+    QDialog language_dialog(this);
+    language_dialog.setWindowTitle(tr("Language"));
+    language_dialog.setMinimumSize(0, 0);
+
+    auto *dialog_layout = new QVBoxLayout(&language_dialog);
+    auto *language_list = new QListWidget(&language_dialog);
+    language_list->setSelectionMode(QAbstractItemView::SingleSelection);
+    for (int i = 0; i < ui_->combobox_language->count(); ++i) {
+      language_list->addItem(ui_->combobox_language->itemText(i));
+    }
+    language_list->setCurrentRow(ui_->combobox_language->currentIndex());
+
+    auto *button_box = new QDialogButtonBox(QDialogButtonBox::Cancel, &language_dialog);
+    QObject::connect(button_box, &QDialogButtonBox::rejected, &language_dialog, &QDialog::reject);
+    QObject::connect(language_list, &QListWidget::itemClicked, &language_dialog, &QDialog::accept);
+    dialog_layout->addWidget(language_list);
+    dialog_layout->addWidget(button_box);
+
+    if (QScreen *screen = QGuiApplication::primaryScreen()) {
+      const QSize available_size = screen->availableGeometry().size();
+      const int row_height = qMax(language_list->sizeHintForRow(0), language_button_->sizeHint().height());
+      const int list_height = qMin(available_size.height() * 2 / 3, row_height * 8);
+      language_list->setMaximumHeight(list_height);
+      language_dialog.resize(available_size.width() * 9 / 10, list_height + button_box->sizeHint().height() + dialog_layout->spacing() * 3);
+    }
+
+    if (language_dialog.exec() == QDialog::Accepted) {
+      ui_->combobox_language->setCurrentIndex(language_list->currentRow());
+      language_button_->setText(ui_->combobox_language->currentText());
+    }
+    window()->repaint();
+  });
+#endif
 #else
   ui_->groupbox_language->setEnabled(false);
   ui_->groupbox_language->setVisible(false);
@@ -204,6 +257,9 @@ void BehaviourSettingsPage::Load() {
   else {
     ui_->combobox_language->setCurrentIndex(ui_->combobox_language->findText(name));
   }
+#if defined(Q_OS_ANDROID) && defined(HAVE_TRANSLATIONS)
+  language_button_->setText(ui_->combobox_language->currentText());
+#endif
 
   ui_->combobox_menuplaymode->setCurrentIndex(ui_->combobox_menuplaymode->findData(s.value(kMenuPlayMode, static_cast<int>(kDefaultMenuPlayMode)).toInt()));
 

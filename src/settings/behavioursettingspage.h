@@ -32,6 +32,9 @@
 
 class SettingsDialog;
 class Ui_BehaviourSettingsPage;
+#if defined(Q_OS_ANDROID) && defined(HAVE_TRANSLATIONS)
+class QPushButton;
+#endif
 
 class BehaviourSettingsPage : public SettingsPage {
   Q_OBJECT
@@ -49,6 +52,9 @@ class BehaviourSettingsPage : public SettingsPage {
  private:
   Ui_BehaviourSettingsPage *ui_;
   QMap<QString, QString> language_map_;
+#if defined(Q_OS_ANDROID) && defined(HAVE_TRANSLATIONS)
+  QPushButton *language_button_;
+#endif
 };
 
 #endif  // BEHAVIOURSETTINGSPAGE_H
