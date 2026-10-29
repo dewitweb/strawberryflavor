@@ -38,6 +38,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QPalette>
 #include <QPainter>
 #include <QFrame>
 #include <QKeySequence>
@@ -208,9 +209,14 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
   AddPage(Page::Radio, new RadioSettingsPage(this, this), streaming);
 
 #ifdef Q_OS_ANDROID
+  setAutoFillBackground(true);
   android_navigation_ = new QStackedWidget(this);
   android_navigation_->setMinimumWidth(0);
+  android_navigation_->setBackgroundRole(QPalette::Window);
+  android_navigation_->setAutoFillBackground(true);
   android_categories_page_ = new QWidget(android_navigation_);
+  android_categories_page_->setBackgroundRole(QPalette::Window);
+  android_categories_page_->setAutoFillBackground(true);
   auto *categories_layout = new QVBoxLayout(android_categories_page_);
   categories_layout->setContentsMargins(0, 0, 0, 0);
   categories_layout->setSpacing(8);
@@ -224,7 +230,13 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
     category_page->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     category_page->setWidgetResizable(true);
     category_page->setFrameShape(QFrame::NoFrame);
+    category_page->setBackgroundRole(QPalette::Window);
+    category_page->setAutoFillBackground(true);
+    category_page->viewport()->setBackgroundRole(QPalette::Window);
+    category_page->viewport()->setAutoFillBackground(true);
     QWidget *category_contents = new QWidget(category_page);
+    category_contents->setBackgroundRole(QPalette::Window);
+    category_contents->setAutoFillBackground(true);
     auto *category_layout = new QVBoxLayout(category_contents);
     category_layout->setContentsMargins(0, 0, 0, 0);
     category_layout->setSpacing(8);
@@ -240,8 +252,8 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
     categories_layout->addWidget(category_button);
     QObject::connect(category_button, &QPushButton::clicked, this, [this, category_page, category]() {
       android_current_category_page_ = category_page;
-      ui_->title->setText(QStringLiteral("<b>") + category->text(0) + u"</b>"_s);
-      android_navigation_->setCurrentWidget(category_page);
+      SetAndroidTitle(category->text(0));
+      SetAndroidNavigationPage(category_page);
       ui_->buttonBox->hide();
     });
 
@@ -258,7 +270,7 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
       QObject::connect(page_button, &QPushButton::clicked, this, [this, item, category_page]() {
         android_current_category_page_ = category_page;
         CurrentItemChanged(item);
-        android_navigation_->setCurrentWidget(ui_->stacked_widget);
+        SetAndroidNavigationPage(ui_->stacked_widget);
         ui_->buttonBox->show();
       });
     }
@@ -290,6 +302,8 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
   ui_->layout->insertWidget(1, android_navigation_);
   ui_->list->hide();
   ui_->stacked_widget->setMinimumWidth(0);
+  ui_->stacked_widget->setBackgroundRole(QPalette::Window);
+  ui_->stacked_widget->setAutoFillBackground(true);
   ui_->buttonBox->setMinimumWidth(0);
   ui_->buttonBox->hide();
   setMinimumSize(0, 0);
@@ -297,16 +311,16 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
 
   QObject::connect(back_button, &QPushButton::clicked, this, [this]() {
     if (android_navigation_->currentWidget() == ui_->stacked_widget) {
-      android_navigation_->setCurrentWidget(android_current_category_page_);
+      SetAndroidNavigationPage(android_current_category_page_);
       ui_->buttonBox->hide();
       QTreeWidgetItem *item = ui_->list->currentItem();
       if (item && item->parent()) {
-        ui_->title->setText(QStringLiteral("<b>") + item->parent()->text(0) + u"</b>"_s);
+        SetAndroidTitle(item->parent()->text(0));
       }
     }
     else if (android_navigation_->currentWidget() != android_categories_page_) {
-      ui_->title->setText(tr("Settings"));
-      android_navigation_->setCurrentWidget(android_categories_page_);
+      SetAndroidTitle();
+      SetAndroidNavigationPage(android_categories_page_);
       ui_->buttonBox->hide();
     }
     else {
@@ -319,8 +333,8 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
   QObject::connect(ui_->list, &QTreeWidget::currentItemChanged, this, &SettingsDialog::CurrentItemChanged);
   ui_->list->setCurrentItem(pages_.value(Page::Behaviour).item_);
 #ifdef Q_OS_ANDROID
-  ui_->title->setText(tr("Settings"));
-  android_navigation_->setCurrentWidget(android_categories_page_);
+  SetAndroidTitle();
+  SetAndroidNavigationPage(android_categories_page_);
   ui_->buttonBox->hide();
 #endif
 
@@ -464,6 +478,12 @@ void SettingsDialog::AddPage(const Page id, SettingsPage *page, QTreeWidgetItem 
   area->setWidget(page);
   area->setWidgetResizable(true);
   area->setFrameShape(QFrame::NoFrame);
+#ifdef Q_OS_ANDROID
+  area->setBackgroundRole(QPalette::Window);
+  area->setAutoFillBackground(true);
+  area->viewport()->setBackgroundRole(QPalette::Window);
+  area->viewport()->setAutoFillBackground(true);
+#endif
 #ifndef Q_OS_ANDROID
   area->setMinimumWidth(page->layout()->minimumSize().width());
 #endif
@@ -515,7 +535,9 @@ void SettingsDialog::OpenAtPage(const Page page) {
 #endif
   ui_->list->setCurrentItem(pages_.value(page).item_);
 #ifdef Q_OS_ANDROID
-  android_navigation_->setCurrentWidget(ui_->stacked_widget);
+  QTreeWidgetItem *item = pages_.value(page).item_;
+  SetAndroidTitle(item->parent()->text(0), item->text(0));
+  SetAndroidNavigationPage(ui_->stacked_widget);
   ui_->buttonBox->show();
 #endif
   show();
@@ -525,8 +547,8 @@ void SettingsDialog::OpenAtPage(const Page page) {
 #ifdef Q_OS_ANDROID
 void SettingsDialog::OpenOverview() {
 
-  ui_->title->setText(tr("Settings"));
-  android_navigation_->setCurrentWidget(android_categories_page_);
+  SetAndroidTitle();
+  SetAndroidNavigationPage(android_categories_page_);
   show();
 
 }
@@ -541,7 +563,12 @@ void SettingsDialog::CurrentItemChanged(QTreeWidgetItem *item) {
   }
 
   // Set the title
+#ifdef Q_OS_ANDROID
+  QTreeWidgetItem *category = item->parent();
+  SetAndroidTitle(category ? category->text(0) : QString(), category ? item->text(0) : QString());
+#else
   ui_->title->setText(QStringLiteral("<b>") + item->text(0) + u"</b>"_s);
+#endif
 
   // Display the right page
   const QList<PageData> pages = pages_.values();
@@ -553,3 +580,71 @@ void SettingsDialog::CurrentItemChanged(QTreeWidgetItem *item) {
   }
 
 }
+
+#ifdef Q_OS_ANDROID
+void SettingsDialog::SetAndroidNavigationPage(QWidget *page) {
+
+  if (!page) return;
+
+  if (page == ui_->stacked_widget) {
+    if (QWidget *current_page = ui_->stacked_widget->currentWidget()) {
+      current_page->show();
+      if (QScrollArea *scroll_area = qobject_cast<QScrollArea*>(current_page)) {
+        if (QWidget *page_widget = scroll_area->widget()) {
+          page_widget->show();
+        }
+      }
+    }
+  }
+  else {
+    for (const PageData &page_data : pages_) {
+      page_data.scroll_area_->hide();
+      page_data.page_->hide();
+    }
+  }
+
+  android_navigation_->setCurrentWidget(page);
+  for (int i = 0; i < android_navigation_->count(); ++i) {
+    QWidget *widget = android_navigation_->widget(i);
+    if (widget != page) {
+      widget->hide();
+      if (QScrollArea *scroll_area = qobject_cast<QScrollArea*>(widget)) {
+        if (QWidget *page_widget = scroll_area->widget()) {
+          page_widget->hide();
+        }
+      }
+    }
+  }
+  page->show();
+  page->setGeometry(android_navigation_->rect());
+  page->raise();
+  if (QScrollArea *scroll_area = qobject_cast<QScrollArea*>(page)) {
+    if (QWidget *page_widget = scroll_area->widget()) {
+      page_widget->show();
+    }
+  }
+  page->repaint();
+  android_navigation_->repaint();
+  repaint();
+
+}
+
+void SettingsDialog::SetAndroidTitle(const QString &category, const QString &page) {
+
+  QStringList parts{tr("Settings")};
+  if (!category.isEmpty()) {
+    parts.append(category);
+  }
+  if (!page.isEmpty()) {
+    parts.append(page);
+  }
+
+  QStringList escaped_parts;
+  escaped_parts.reserve(parts.size());
+  for (const QString &part : parts) {
+    escaped_parts.append(part.toHtmlEscaped());
+  }
+  ui_->title->setText(u"<b>"_s + escaped_parts.join(u" &gt; "_s) + u"</b>"_s);
+
+}
+#endif

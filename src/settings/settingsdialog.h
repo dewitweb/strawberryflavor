@@ -153,6 +153,8 @@ class SettingsDialog : public QDialog {
   bool loading_settings_;
   QMap<Page, PageData> pages_;
 #ifdef Q_OS_ANDROID
+  void SetAndroidNavigationPage(QWidget *page);
+  void SetAndroidTitle(const QString &category = QString(), const QString &page = QString());
   QStackedWidget *android_navigation_;
   QWidget *android_categories_page_;
   QMap<Page, QWidget*> android_category_pages_;
