@@ -144,9 +144,11 @@ The editor displays the current playlist's name in a larger, centered heading ab
 Playback controls and the seek bar remain at the bottom when switching views.
 The player bar's **Menu** button provides access to the application menus, including settings.
 Settings breadcrumbs wrap on narrow screens.
+Fourth-level settings titles start on a separate line below the parent breadcrumb.
 The **General > Behavior** page shows compact buttons with current values for grouped settings.
 Each button opens a full-page editor or choice list, including Language, rather than a popup.
 Single-choice lists return to Behavior after selection; related choices stay together on one screen.
+Selected options use the theme highlight and matching text color, alongside their radio marker.
 Back returns one level without selecting a new choice and preserves the Behavior scroll position.
 Changes remain pending until Apply or OK; Cancel discards unapplied changes.
 Headings, options, and help text wrap to fit narrow screens without horizontal scrolling.

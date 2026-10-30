@@ -46,6 +46,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QBoxLayout>
+#include <QPalette>
 
 #include "constants/behavioursettings.h"
 #include "core/iconloader.h"
@@ -251,6 +252,16 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
       controls_layout->insertWidget(0, ui_->label_language);
     }
     for (QRadioButton *radio : group->findChildren<QRadioButton*>()) {
+      radio->setAutoFillBackground(true);
+      auto update_highlight = [radio](bool checked) {
+        radio->setBackgroundRole(checked ? QPalette::Highlight : QPalette::Window);
+        radio->setForegroundRole(checked ? QPalette::HighlightedText : QPalette::WindowText);
+        for (QLabel *label : radio->findChildren<QLabel*>()) {
+          label->setForegroundRole(checked ? QPalette::HighlightedText : QPalette::WindowText);
+        }
+      };
+      QObject::connect(radio, &QRadioButton::toggled, radio, update_highlight);
+      update_highlight(radio->isChecked());
       QObject::connect(radio, &QRadioButton::toggled, this, update_summary);
     }
     for (QSpinBox *spin : group->findChildren<QSpinBox*>()) {

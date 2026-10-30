@@ -610,7 +610,7 @@ void SettingsDialog::OpenAndroidSubpage(QWidget *content, const QString &title) 
   android_subpage_->setWidget(content);
   android_navigation_->addWidget(android_subpage_);
   QTreeWidgetItem *item = ui_->list->currentItem();
-  SetAndroidTitle(item->parent()->text(0), item->text(0) + u" > "_s + title);
+  SetAndroidTitle(item->parent()->text(0), item->text(0), title);
   ui_->buttonBox->hide();
   SetAndroidNavigationPage(android_subpage_);
   QTimer::singleShot(0, android_subpage_, [area = android_subpage_]() {
@@ -729,7 +729,7 @@ void SettingsDialog::SetAndroidNavigationPage(QWidget *page) {
 
 }
 
-void SettingsDialog::SetAndroidTitle(const QString &category, const QString &page) {
+void SettingsDialog::SetAndroidTitle(const QString &category, const QString &page, const QString &subpage) {
 
   QStringList parts{tr("Settings")};
   if (!category.isEmpty()) {
@@ -744,7 +744,11 @@ void SettingsDialog::SetAndroidTitle(const QString &category, const QString &pag
   for (const QString &part : parts) {
     escaped_parts.append(part.toHtmlEscaped());
   }
-  ui_->title->setText(u"<b>"_s + escaped_parts.join(u" &gt; "_s) + u"</b>"_s);
+  QString title = escaped_parts.join(u" &gt; "_s);
+  if (!subpage.isEmpty()) {
+    title += u"<br/>"_s + subpage.toHtmlEscaped();
+  }
+  ui_->title->setText(u"<b>"_s + title + u"</b>"_s);
 
 }
 #endif
