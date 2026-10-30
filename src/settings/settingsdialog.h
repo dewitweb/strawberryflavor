@@ -42,6 +42,7 @@ class QStackedWidget;
 class QAbstractButton;
 class QShowEvent;
 class QCloseEvent;
+class QKeyEvent;
 
 class Player;
 class AudioDeviceListers;
@@ -112,11 +113,14 @@ class SettingsDialog : public QDialog {
   void OpenAtPage(const Page page);
 #ifdef Q_OS_ANDROID
   void OpenOverview();
+  void OpenAndroidSubpage(QWidget *content, const QString &title);
+  void CloseAndroidSubpage();
 #endif
 
  protected:
 #ifdef Q_OS_ANDROID
   bool event(QEvent *event) override;
+  void keyPressEvent(QKeyEvent *event) override;
 #endif
   void showEvent(QShowEvent *e) override;
   void closeEvent(QCloseEvent *e) override;
@@ -157,11 +161,15 @@ class SettingsDialog : public QDialog {
   QMap<Page, PageData> pages_;
 #ifdef Q_OS_ANDROID
   void SetAndroidNavigationPage(QWidget *page);
+  void AndroidBack();
   void SetAndroidTitle(const QString &category = QString(), const QString &page = QString());
   QStackedWidget *android_navigation_;
   QWidget *android_categories_page_;
   QMap<Page, QWidget*> android_category_pages_;
   QWidget *android_current_category_page_;
+  QScrollArea *android_subpage_ = nullptr;
+  QWidget *android_subpage_parent_ = nullptr;
+  int android_parent_scroll_value_ = 0;
 #endif
 };
 

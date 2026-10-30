@@ -144,7 +144,12 @@ The editor displays the current playlist's name in a larger, centered heading ab
 Playback controls and the seek bar remain at the bottom when switching views.
 The player bar's **Menu** button provides access to the application menus, including settings.
 Settings breadcrumbs wrap on narrow screens.
-The **General > Behavior** page uses wrapping headings and help text with vertically stacked controls to fit the screen without horizontal scrolling.
+The **General > Behavior** page shows compact buttons with current values for grouped settings.
+Each button opens a full-page editor or choice list, including Language, rather than a popup.
+Single-choice lists return to Behavior after selection; related choices stay together on one screen.
+Back returns one level without selecting a new choice and preserves the Behavior scroll position.
+Changes remain pending until Apply or OK; Cancel discards unapplied changes.
+Headings, options, and help text wrap to fit narrow screens without horizontal scrolling.
 The playlist editor puts Clear, Undo, and Redo in its **More** menu to keep the toolbar compact.
 In portrait orientation, the editor shows only track number, title, artist, and album; landscape restores the full column layout.
 Playlist export uses Android's document picker and preserves the selected playlist format separately from the document URI.
