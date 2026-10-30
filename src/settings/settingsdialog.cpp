@@ -293,6 +293,7 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
   title_font.setPointSize(18);
   title_font.setBold(true);
   ui_->title->setFont(title_font);
+  ui_->title->setWordWrap(true);
   header->addWidget(ui_->title, 1);
   header->addWidget(back_button);
   ui_->layout->removeWidget(ui_->title);

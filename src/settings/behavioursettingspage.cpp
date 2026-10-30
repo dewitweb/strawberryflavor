@@ -46,6 +46,8 @@
 #include <QComboBox>
 #include <QAbstractItemView>
 #include <QGroupBox>
+#include <QLabel>
+#include <QBoxLayout>
 
 #include "constants/behavioursettings.h"
 #include "core/iconloader.h"
@@ -201,6 +203,28 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
 
   ui_->combobox_doubleclickplaylistaddmode->setItemData(0, static_cast<int>(PlaylistAddBehaviour::Play));
   ui_->combobox_doubleclickplaylistaddmode->setItemData(1, static_cast<int>(PlaylistAddBehaviour::Enqueue));
+
+#ifdef Q_OS_ANDROID
+  // QGroupBox titles cannot wrap; use headings inside the vertical layouts instead.
+  for (QGroupBox *group : findChildren<QGroupBox*>()) {
+    auto *controls_layout = qobject_cast<QBoxLayout*>(group->layout());
+    if (!controls_layout) continue;
+
+    auto *heading = new QLabel(group->title(), group);
+    heading->setWordWrap(true);
+    group->setAccessibleName(group->title());
+    group->setTitle(QString());
+    controls_layout->setDirection(QBoxLayout::TopToBottom);
+    controls_layout->insertWidget(0, heading);
+  }
+  for (QLabel *label : findChildren<QLabel*>()) {
+    label->setWordWrap(true);
+  }
+  for (QComboBox *combo : findChildren<QComboBox*>()) {
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    combo->setMinimumContentsLength(12);
+  }
+#endif
 
 }
 
