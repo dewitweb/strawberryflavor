@@ -85,7 +85,9 @@ When adding or changing hierarchical menus or navigation flows anywhere in the a
 
 The Android Settings overview and its category/page navigation are an example of this pattern.
 
-For Android hierarchical menus and dropdown-style choices throughout the app:
+### Android build principles
+
+Apply these UI principles when building or changing hierarchical menus and dropdown-style choices anywhere in the Android app, not just Settings. Follow the shared hierarchical navigation rules above as well.
 
 - Use compact navigation buttons showing the setting title and current value instead of dropdown popups. Keep simple on/off controls directly on the parent page where appropriate.
 - Display current values in bold using the theme's link text color; leave titles and button backgrounds unchanged. Show all current values when a button represents related settings.
