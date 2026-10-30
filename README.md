@@ -147,8 +147,10 @@ Settings breadcrumbs wrap on narrow screens.
 Fourth-level settings titles start on a separate line below the parent breadcrumb.
 The **General > Behavior** page shows compact buttons with current values for grouped settings.
 Current values are bold and use the theme's link color to distinguish them from setting titles.
+The desktop-only **Show playing widget** setting is hidden on Android.
 Each button opens a full-page editor or choice list, including Language, rather than a popup.
 Single-choice lists return to Behavior after selection; related choices stay together on one screen.
+Section headings above related choices are bold to distinguish them from the options.
 Selected options use the theme highlight and matching text color without visible radio circles.
 Back returns one level without selecting a new choice and preserves the Behavior scroll position.
 Changes remain pending until Apply or OK; Cancel discards unapplied changes.

@@ -105,6 +105,7 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
   ui_->checkbox_showtrayicon->hide();
   ui_->checkbox_keeprunning->hide();
   ui_->checkbox_trayicon_progress->hide();
+  ui_->checkbox_playingwidget->hide();
 #endif
 
 #if !defined(HAVE_DBUS) || defined(Q_OS_MACOS)
@@ -223,6 +224,9 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
       choices_layout->setContentsMargins(0, 0, 0, 0);
       if (combos.size() > 1) {
         auto *heading = new QLabel(combo == ui_->combobox_doubleclickaddmode ? tr("Playlist action") : tr("Playback"), choices);
+        QFont heading_font = heading->font();
+        heading_font.setBold(true);
+        heading->setFont(heading_font);
         heading->setWordWrap(true);
         choices_layout->addWidget(heading);
       }
