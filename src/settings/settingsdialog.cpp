@@ -54,6 +54,10 @@
 #include <QSettings>
 #include <QShowEvent>
 #include <QCloseEvent>
+#ifdef Q_OS_ANDROID
+#  include <QBackingStore>
+#  include <QEvent>
+#endif
 
 #include "core/settings.h"
 #include "core/player.h"
@@ -352,6 +356,21 @@ SettingsDialog::SettingsDialog(const SharedPtr<Player> player,
 SettingsDialog::~SettingsDialog() {
   delete ui_;
 }
+
+#ifdef Q_OS_ANDROID
+bool SettingsDialog::event(QEvent *event) {
+
+  const bool handled = QDialog::event(event);
+  if (event->type() == QEvent::UpdateRequest && isVisible()) {
+    if (QBackingStore *store = backingStore()) {
+      // Qt's Android RHI backing store scales partial flush regions twice on high-DPI screens.
+      store->flush(rect());
+    }
+  }
+  return handled;
+
+}
+#endif
 
 void SettingsDialog::showEvent(QShowEvent *e) {
 
