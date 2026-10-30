@@ -47,6 +47,7 @@
 #include <QLabel>
 #include <QBoxLayout>
 #include <QPalette>
+#include <QFont>
 
 #include "constants/behavioursettings.h"
 #include "core/iconloader.h"
@@ -194,6 +195,10 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
     caption->setAttribute(Qt::WA_TransparentForMouseEvents);
     button_layout->addWidget(caption);
     auto *summary = new QLabel(button);
+    QFont summary_font = summary->font();
+    summary_font.setBold(true);
+    summary->setFont(summary_font);
+    summary->setForegroundRole(QPalette::Link);
     summary->setWordWrap(true);
     summary->setAttribute(Qt::WA_TransparentForMouseEvents);
     button_layout->addWidget(summary);
