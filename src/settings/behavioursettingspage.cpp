@@ -54,29 +54,12 @@
 #include "core/settings.h"
 #include "settings/settingspage.h"
 #include "settings/settingsdialog.h"
+#include "settings/androidsettingspage.h"
 #include "behavioursettingspage.h"
 #include "ui_behavioursettingspage.h"
 
 using namespace Qt::Literals::StringLiterals;
 using namespace BehaviourSettings;
-
-#ifdef Q_OS_ANDROID
-namespace {
-template<typename Base>
-class AndroidSettingsButton : public Base {
- public:
-  explicit AndroidSettingsButton(QWidget *parent) : Base(parent) {}
-
-  QSize sizeHint() const override { return this->layout()->totalSizeHint().expandedTo(QSize(0, 48)); }
-  QSize minimumSizeHint() const override { return this->layout()->totalMinimumSize().expandedTo(QSize(0, 48)); }
-  bool hasHeightForWidth() const override { return true; }
-  int heightForWidth(int width) const override { return qMax(48, this->layout()->totalHeightForWidth(width)); }
-
- protected:
-  bool hitButton(const QPoint &position) const override { return this->rect().contains(position); }
-};
-}  // namespace
-#endif
 
 #ifdef HAVE_TRANSLATIONS
 namespace {
@@ -190,6 +173,7 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
     button->setMinimumHeight(48);
     button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     button->setAccessibleName(title);
+    button->setProperty("androidSettingsNavigation", true);
     auto *button_layout = new QVBoxLayout(button);
     auto *caption = new QLabel(title + u" >"_s, button);
     caption->setWordWrap(true);

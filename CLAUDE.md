@@ -90,7 +90,7 @@ The Android Settings overview and its category/page navigation are an example of
 Apply these UI principles when building or changing hierarchical menus and dropdown-style choices anywhere in the Android app, not just Settings. Follow the shared hierarchical navigation rules above as well.
 
 - Use compact navigation buttons showing the setting title and current value instead of dropdown popups. Keep simple on/off controls directly on the parent page where appropriate.
-- Display current values in bold using the theme's link text color; leave titles and button backgrounds unchanged. Show all current values when a button represents related settings.
+- Display current values in bold using the theme's link text color; leave titles and button backgrounds unchanged. Summarize related settings compactly, with full details in their editor. Never include passwords or text-entry credentials in summaries.
 - Open choices in a full-page subscreen within the existing navigation hierarchy, not a floating dialog. Keep related choices together on one subscreen.
 - Show choices as tappable rows without visible radio circles or bullets. Use the theme's highlight background and matching highlighted-text color for the selected row, retaining the checked state for accessibility rather than imposing a fixed green.
 - Keep the parent breadcrumb visible and start the fourth-level title on a separate line. Allow titles, values, and choices to wrap on narrow screens.
@@ -100,6 +100,9 @@ Apply these UI principles when building or changing hierarchical menus and dropd
 - Keep these Android adaptations platform-guarded; do not replace existing Windows or Linux controls.
 
 The Android General > Behavior page is the reference implementation.
+`SettingsDialog::AddPage()` applies the shared `AndroidSettingsPage` adapter to other settings pages, retaining their original controls, combo models, and load/save logic.
+Reuse this adapter instead of creating parallel Android settings forms.
+An editor temporarily reparents its controls; use `SettingsPage::IsActive()` rather than `isVisible()` when guarding asynchronous results for the active settings flow.
 
 ### Optional features
 

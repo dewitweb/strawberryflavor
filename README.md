@@ -145,14 +145,20 @@ Playback controls and the seek bar remain at the bottom when switching views.
 The player bar's **Menu** button provides access to the application menus, including settings.
 Settings breadcrumbs wrap on narrow screens.
 Fourth-level settings titles start on a separate line below the parent breadcrumb.
-The **General > Behavior** page shows compact buttons with current values for grouped settings.
+Settings pages share compact section buttons with current values for grouped settings.
 Current values are bold and use the theme's link color to distinguish them from setting titles.
+Larger sections show a short summary; their full controls remain together in a dedicated editor.
+Passwords and other text-entry credentials are never included in section summaries.
 The desktop-only **Show playing widget** setting is hidden on Android.
+Unsupported notification types and their desktop popup options are also hidden.
+The draggable notification preview appears only in its Pretty OSD editor.
 Each button opens a full-page editor or choice list, including Language, rather than a popup.
-Single-choice lists return to Behavior after selection; related choices stay together on one screen.
+Dropdown choices and settings-menu actions open another subscreen using the original options.
+Single-choice lists return to their parent after selection; related choices stay together on one screen.
+Transcoding formats and manual proxy configuration have their own editors.
 Section headings above related choices are bold to distinguish them from the options.
 Selected options use the theme highlight and matching text color without visible radio circles.
-Back returns one level without selecting a new choice and preserves the Behavior scroll position.
+Back returns one level without selecting a new choice and preserves the parent's scroll position.
 Changes remain pending until Apply or OK; Cancel discards unapplied changes.
 Headings, options, and help text wrap to fit narrow screens without horizontal scrolling.
 The playlist editor puts Clear, Undo, and Redo in its **More** menu to keep the toolbar compact.

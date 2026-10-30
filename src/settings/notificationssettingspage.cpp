@@ -119,6 +119,17 @@ NotificationsSettingsPage::NotificationsSettingsPage(SettingsDialog *dialog, OSD
   ui_->notifications_tray->setEnabled(osd_->SupportsTrayPopups());
   ui_->notifications_pretty->setEnabled(osd_->SupportsOSDPretty());
 
+#ifdef Q_OS_ANDROID
+  menu->setTitle(tr("Insert variable"));
+  ui_->notifications_exp_chooser1->setAccessibleName(tr("Insert variable into summary"));
+  ui_->notifications_exp_chooser2->setAccessibleName(tr("Insert variable into body"));
+  ui_->notifications_native->setVisible(osd_->SupportsNativeNotifications());
+  ui_->notifications_tray->setVisible(osd_->SupportsTrayPopups());
+  ui_->notifications_pretty->setVisible(osd_->SupportsOSDPretty());
+  ui_->notifications_pretty_group->setVisible(osd_->SupportsOSDPretty());
+  ui_->notifications_opacity->installEventFilter(this);
+#endif
+
   QObject::connect(ui_->notifications_pretty, &QRadioButton::toggled, this, &NotificationsSettingsPage::UpdatePopupVisible);
 
   QObject::connect(ui_->notifications_custom_text_enabled, &QCheckBox::toggled, this, &NotificationsSettingsPage::NotificationCustomTextChanged);
@@ -147,6 +158,15 @@ void NotificationsSettingsPage::hideEvent(QHideEvent *e) {
   Q_UNUSED(e)
   UpdatePopupVisible();
 }
+
+#ifdef Q_OS_ANDROID
+bool NotificationsSettingsPage::eventFilter(QObject *object, QEvent *event) {
+
+  if (object == ui_->notifications_opacity && (event->type() == QEvent::Show || event->type() == QEvent::Hide)) UpdatePopupVisible();
+  return SettingsPage::eventFilter(object, event);
+
+}
+#endif
 
 void NotificationsSettingsPage::Load() {
 
@@ -289,7 +309,11 @@ void NotificationsSettingsPage::PrettyOpacityChanged(int value) {
 
 void NotificationsSettingsPage::UpdatePopupVisible() {
 
+#ifdef Q_OS_ANDROID
+  pretty_popup_->setVisible(ui_->notifications_opacity->isVisible() && ui_->notifications_pretty->isChecked());
+#else
   pretty_popup_->setVisible(isVisible() && ui_->notifications_pretty->isChecked());
+#endif
 
 }
 

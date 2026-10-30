@@ -887,6 +887,7 @@ set(SOURCES
 
   src/settings/settingsdialog.cpp
   src/settings/settingspage.cpp
+  src/settings/androidsettingspage.cpp
   src/settings/settingsitemdelegate.cpp
   src/settings/behavioursettingspage.cpp
   src/settings/collectionsettingspage.cpp
@@ -1196,6 +1197,7 @@ set(HEADERS
 
   src/settings/settingsdialog.h
   src/settings/settingspage.h
+  src/settings/androidsettingspage.h
   src/settings/settingsitemdelegate.h
   src/settings/behavioursettingspage.h
   src/settings/collectionsettingspage.h

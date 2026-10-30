@@ -75,6 +75,7 @@
 
 #include "settingsdialog.h"
 #include "settingspage.h"
+#include "androidsettingspage.h"
 #include "settingsitemdelegate.h"
 #include "behavioursettingspage.h"
 #include "collectionsettingspage.h"
@@ -389,7 +390,7 @@ void SettingsDialog::closeEvent(QCloseEvent *e) {
 void SettingsDialog::accept() {
 
 #ifdef Q_OS_ANDROID
-  CloseAndroidSubpage();
+  while (!android_subpages_.isEmpty()) CloseAndroidSubpage();
 #endif
   const QList<PageData> pages = pages_.values();
   for (const PageData &page : pages) {
@@ -406,7 +407,7 @@ void SettingsDialog::accept() {
 void SettingsDialog::reject() {
 
 #ifdef Q_OS_ANDROID
-  CloseAndroidSubpage();
+  while (!android_subpages_.isEmpty()) CloseAndroidSubpage();
 #endif
   // Notify each page that user clicks on Cancel
   const QList<PageData> pages = pages_.values();
@@ -463,6 +464,9 @@ QTreeWidgetItem *SettingsDialog::AddCategory(const QString &name) {
 
 void SettingsDialog::AddPage(const Page id, SettingsPage *page, QTreeWidgetItem *parent) {
 
+#ifdef Q_OS_ANDROID
+  if (id != Page::Behaviour) AndroidSettingsPage::Adapt(page);
+#endif
   if (!parent) parent = ui_->list->invisibleRootItem();
 
   // Connect page's signals to the settings dialog's signals
@@ -545,7 +549,7 @@ void SettingsDialog::OpenAtPage(const Page page) {
   }
 
 #ifdef Q_OS_ANDROID
-  CloseAndroidSubpage();
+  while (!android_subpages_.isEmpty()) CloseAndroidSubpage();
   android_current_category_page_ = android_category_pages_.value(page, android_categories_page_);
 #endif
   ui_->list->setCurrentItem(pages_.value(page).item_);
@@ -562,7 +566,7 @@ void SettingsDialog::OpenAtPage(const Page page) {
 #ifdef Q_OS_ANDROID
 void SettingsDialog::OpenOverview() {
 
-  CloseAndroidSubpage();
+  while (!android_subpages_.isEmpty()) CloseAndroidSubpage();
   SetAndroidTitle();
   SetAndroidNavigationPage(android_categories_page_);
   show();
@@ -598,22 +602,32 @@ void SettingsDialog::CurrentItemChanged(QTreeWidgetItem *item) {
 }
 
 #ifdef Q_OS_ANDROID
+bool SettingsDialog::IsAndroidPageActive(const SettingsPage *page) const {
+
+  if (!isVisible() || android_subpages_.isEmpty()) return false;
+  for (const PageData &data : pages_) {
+    if (data.page_ == page) return data.item_ == ui_->list->currentItem();
+  }
+  return false;
+
+}
+
 void SettingsDialog::OpenAndroidSubpage(QWidget *content, const QString &title) {
 
-  CloseAndroidSubpage();
-  auto *parent_area = qobject_cast<QScrollArea*>(ui_->stacked_widget->currentWidget());
-  android_parent_scroll_value_ = parent_area->verticalScrollBar()->value();
-  android_subpage_parent_ = content->parentWidget();
-  android_subpage_ = new QScrollArea;
-  android_subpage_->setWidgetResizable(true);
-  android_subpage_->setFrameShape(QFrame::NoFrame);
-  android_subpage_->setWidget(content);
-  android_navigation_->addWidget(android_subpage_);
+  auto *parent_area = android_subpages_.isEmpty() ? qobject_cast<QScrollArea*>(ui_->stacked_widget->currentWidget()) : android_subpages_.last().area;
+  auto *area = new QScrollArea;
+  area->setWidgetResizable(true);
+  area->setFrameShape(QFrame::NoFrame);
+  android_subpages_.append({area, content->parentWidget(), parent_area, parent_area->verticalScrollBar()->value(), title});
+  area->setWidget(content);
+  android_navigation_->addWidget(area);
   QTreeWidgetItem *item = ui_->list->currentItem();
-  SetAndroidTitle(item->parent()->text(0), item->text(0), title);
+  QStringList titles;
+  for (const AndroidSubpage &subpage : android_subpages_) titles << subpage.title;
+  SetAndroidTitle(item->parent()->text(0), item->text(0), titles.join(u" > "_s));
   ui_->buttonBox->hide();
-  SetAndroidNavigationPage(android_subpage_);
-  QTimer::singleShot(0, android_subpage_, [area = android_subpage_]() {
+  SetAndroidNavigationPage(area);
+  QTimer::singleShot(0, area, [area]() {
     if (!area->widget()) return;
     for (QRadioButton *choice : area->widget()->findChildren<QRadioButton*>()) {
       if (choice->isVisible() && choice->isChecked()) {
@@ -627,23 +641,31 @@ void SettingsDialog::OpenAndroidSubpage(QWidget *content, const QString &title) 
 
 void SettingsDialog::CloseAndroidSubpage() {
 
-  if (!android_subpage_) return;
+  if (android_subpages_.isEmpty()) return;
+  const AndroidSubpage subpage = android_subpages_.takeLast();
   // Move focus before takeWidget() clears QScrollArea's internal widget pointer.
-  android_subpage_->widget()->hide();
-  QWidget *content = android_subpage_->takeWidget();
-  content->setParent(android_subpage_parent_);
+  subpage.area->widget()->hide();
+  QWidget *content = subpage.area->takeWidget();
+  content->setParent(subpage.content_parent);
   content->hide();
-  android_navigation_->removeWidget(android_subpage_);
-  android_subpage_->deleteLater();
-  android_subpage_ = nullptr;
-  android_subpage_parent_ = nullptr;
-  CurrentItemChanged(ui_->list->currentItem());
-  ui_->buttonBox->show();
-  SetAndroidNavigationPage(ui_->stacked_widget);
-  auto *parent_area = qobject_cast<QScrollArea*>(ui_->stacked_widget->currentWidget());
-  QTimer::singleShot(0, parent_area, [parent_area, value = android_parent_scroll_value_]() {
+  android_navigation_->removeWidget(subpage.area);
+  subpage.area->deleteLater();
+  if (android_subpages_.isEmpty()) {
+    CurrentItemChanged(ui_->list->currentItem());
+    ui_->buttonBox->show();
+    SetAndroidNavigationPage(ui_->stacked_widget);
+  }
+  else {
+    QTreeWidgetItem *item = ui_->list->currentItem();
+    QStringList titles;
+    for (const AndroidSubpage &parent : android_subpages_) titles << parent.title;
+    SetAndroidTitle(item->parent()->text(0), item->text(0), titles.join(u" > "_s));
+    SetAndroidNavigationPage(subpage.parent_area);
+  }
+  QTimer::singleShot(0, subpage.parent_area, [parent_area = subpage.parent_area, value = subpage.parent_scroll_value]() {
     parent_area->verticalScrollBar()->setValue(value);
   });
+  if (content->property("androidTransientSubpage").toBool()) content->deleteLater();
 
 }
 
@@ -660,7 +682,7 @@ void SettingsDialog::keyPressEvent(QKeyEvent *event) {
 
 void SettingsDialog::AndroidBack() {
 
-  if (android_subpage_) {
+  if (!android_subpages_.isEmpty()) {
     CloseAndroidSubpage();
   }
   else if (android_navigation_->currentWidget() == ui_->stacked_widget) {
