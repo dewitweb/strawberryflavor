@@ -85,6 +85,20 @@ When adding or changing hierarchical menus or navigation flows anywhere in the a
 
 The Android Settings overview and its category/page navigation are an example of this pattern.
 
+For Android hierarchical menus and dropdown-style choices throughout the app:
+
+- Use compact navigation buttons showing the setting title and current value instead of dropdown popups. Keep simple on/off controls directly on the parent page where appropriate.
+- Display current values in bold using the theme's link text color; leave titles and button backgrounds unchanged. Show all current values when a button represents related settings.
+- Open choices in a full-page subscreen within the existing navigation hierarchy, not a floating dialog. Keep related choices together on one subscreen.
+- Mark selected choices with both a radio indicator and the theme's highlight background and matching highlighted-text color, rather than a fixed green or color alone.
+- Keep the parent breadcrumb visible and start the fourth-level title on a separate line. Allow titles, values, and choices to wrap on narrow screens.
+- Return to the parent after selecting a single choice. For related choices, remain on the subscreen so each can be edited. Back alone must not select a different choice.
+- Restore the parent's selection and scroll position when returning, and keep inactive controls hidden and non-interactive.
+- Preserve the flow's save semantics. In Settings, edits remain pending until Apply or OK, and Cancel discards unapplied changes.
+- Keep these Android adaptations platform-guarded; do not replace existing Windows or Linux controls.
+
+The Android General > Behavior page is the reference implementation.
+
 ### Optional features
 
 Most features are compile-time optional, gated by `HAVE_*` macros generated into `config.h` (from `src/config.h.in`). In `CMakeLists.txt` they are added with the `optional_source(HAVE_X SOURCES ... HEADERS ...)` helper. Platform/feature code must be guarded with the matching `#ifdef HAVE_X` and CMake guard. D-Bus interfaces/adaptors (MPRIS2, notifications, UDisks2, KGlobalAccel) are generated from XML via `qt_add_dbus_interface` / `qt_add_dbus_adaptor`.
