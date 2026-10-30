@@ -232,7 +232,7 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
         choice->setMinimumHeight(48);
         choice->setAccessibleName(combo->itemText(i));
         auto *choice_layout = new QVBoxLayout(choice);
-        choice_layout->setContentsMargins(28, 8, 8, 8);
+        choice_layout->setContentsMargins(8, 8, 8, 8);
         auto *label = new QLabel(combo->itemText(i), choice);
         label->setWordWrap(true);
         label->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -257,6 +257,7 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
       controls_layout->insertWidget(0, ui_->label_language);
     }
     for (QRadioButton *radio : group->findChildren<QRadioButton*>()) {
+      radio->setStyleSheet(u"QRadioButton::indicator { image: none; border: none; background: transparent; width: 0px; height: 0px; }"_s);
       radio->setAutoFillBackground(true);
       auto update_highlight = [radio](bool checked) {
         radio->setBackgroundRole(checked ? QPalette::Highlight : QPalette::Window);
@@ -268,6 +269,12 @@ BehaviourSettingsPage::BehaviourSettingsPage(SettingsDialog *dialog, QWidget *pa
       QObject::connect(radio, &QRadioButton::toggled, radio, update_highlight);
       update_highlight(radio->isChecked());
       QObject::connect(radio, &QRadioButton::toggled, this, update_summary);
+      if (combos.isEmpty()) {
+        radio->setMinimumHeight(48);
+        QObject::connect(radio, &QRadioButton::clicked, this, [this]() {
+          this->dialog()->CloseAndroidSubpage();
+        });
+      }
     }
     for (QSpinBox *spin : group->findChildren<QSpinBox*>()) {
       QObject::connect(spin, &QSpinBox::valueChanged, this, update_summary);
