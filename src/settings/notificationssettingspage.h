@@ -51,9 +51,6 @@ class NotificationsSettingsPage : public SettingsPage {
  protected:
   void hideEvent(QHideEvent *e) override;
   void showEvent(QShowEvent *e) override;
-#ifdef Q_OS_ANDROID
-  bool eventFilter(QObject *object, QEvent *event) override;
-#endif
 
  private Q_SLOTS:
   void NotificationTypeChanged();

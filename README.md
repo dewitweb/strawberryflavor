@@ -148,10 +148,11 @@ Fourth-level settings titles start on a separate line below the parent breadcrum
 Settings pages share compact section buttons with current values for grouped settings.
 Current values are bold and use the theme's link color to distinguish them from setting titles.
 Larger sections show a short summary; their full controls remain together in a dedicated editor.
-Passwords and other text-entry credentials are never included in section summaries.
+Passwords and other text-entry credentials, including editable server URLs, are never included in section summaries.
 The desktop-only **Show playing widget** setting is hidden on Android.
 Unsupported notification types and their desktop popup options are also hidden.
-The draggable notification preview appears only in its Pretty OSD editor.
+Pretty OSD has an explicit Preview subscreen on Android rather than a draggable overlay.
+Dropdown editors open after a completed tap, not when starting a swipe.
 Each button opens a full-page editor or choice list, including Language, rather than a popup.
 Dropdown choices and settings-menu actions open another subscreen using the original options.
 Single-choice lists return to their parent after selection; related choices stay together on one screen.

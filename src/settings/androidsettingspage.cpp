@@ -26,6 +26,7 @@
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QAction>
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -49,6 +50,7 @@
 #include <QScrollArea>
 #include <QSlider>
 #include <QSpinBox>
+#include <QTouchEvent>
 #include <QStyleOptionButton>
 #include <QStylePainter>
 #include <QStyledItemDelegate>
@@ -207,11 +209,27 @@ class ComboPresentation : public QObject {
  protected:
   bool eventFilter(QObject *, QEvent *event) override {
     if (event->type() == QEvent::TouchBegin) {
+      const auto *touch = static_cast<QTouchEvent*>(event);
+      touch_pending_ = touch->points().size() == 1;
+      if (touch_pending_) touch_start_ = touch->points().first().globalPosition();
       event->accept();
-      Open();
       return true;
     }
-    if (event->type() == QEvent::TouchUpdate || event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+    if (event->type() == QEvent::TouchUpdate || event->type() == QEvent::TouchEnd) {
+      const auto *touch = static_cast<QTouchEvent*>(event);
+      if (touch->points().size() != 1 ||
+          (touch->points().first().globalPosition() - touch_start_).manhattanLength() > QApplication::startDragDistance()) {
+        touch_pending_ = false;
+      }
+      const bool open = event->type() == QEvent::TouchEnd && touch_pending_ &&
+                        combo_->rect().contains(touch->points().first().position().toPoint());
+      if (event->type() == QEvent::TouchEnd) touch_pending_ = false;
+      event->accept();
+      if (open) Open();
+      return true;
+    }
+    if (event->type() == QEvent::TouchCancel) {
+      touch_pending_ = false;
       event->accept();
       return true;
     }
@@ -282,6 +300,8 @@ class ComboPresentation : public QObject {
 
   QComboBox *combo_;
   SettingsDialog *dialog_;
+  QPointF touch_start_;
+  bool touch_pending_ = false;
 };
 
 class MenuPresentation : public QObject {
@@ -369,7 +389,7 @@ void Summarize(const QList<QPointer<QWidget>> &controls, QLabel *summary, QPushB
   for (const QPointer<QWidget> &control : ordered) {
     if (!control || control->isHidden()) continue;
     if (auto *combo = qobject_cast<QComboBox*>(control.data())) {
-      if (combo->isEnabled() && !combo->currentText().isEmpty()) add_value(combo, combo->currentText());
+      if (!combo->isEditable() && combo->isEnabled() && !combo->currentText().isEmpty()) add_value(combo, combo->currentText());
     }
     else if (auto *radio = qobject_cast<QRadioButton*>(control.data())) {
       if (radio->isChecked()) values << QString(radio->text()).remove(u'&');
